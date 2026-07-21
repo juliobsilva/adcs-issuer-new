@@ -73,14 +73,12 @@ func getEnv(key, fallback string) string {
 }
 
 func NewCertserv() (*Certserv, error) {
-	fmt.Println("Using directory %s for simulator in NewCertserv()",caWorkDir)
 	cs := &Certserv{
 		0,
 		nil,
 		nil,
 		nil,
 	}
-	fmt.Println("Using directory %s for simulator",caWorkDir)
 	err := cs.initRootCert()
 	if err != nil {
 		return nil, fmt.Errorf("Error in initRootCert(): %s", err.Error())
@@ -422,7 +420,7 @@ func respondError(w http.ResponseWriter, text string) {
 }
 
 func (c *Certserv) initRootCert() error {
-	//fmt.Println("Reading cert file . %s", caCertFile)
+	//fmt.Printf("Reading cert file . %s""\n", caCertFile)
 	bytes, err := ioutil.ReadFile(caCertFile)
 	if err != nil {
 		return fmt.Errorf("Cannot find root CA cert 1. %s ", err.Error())
