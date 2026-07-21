@@ -7,7 +7,6 @@ var (
 	Commit = "unset"
 	// Release is a semantic version of current build
 	Release = "unset"
-	// name of operator 
-	Project   = "adcs-simulator"
-
+	// name of operator
+	Project = "adcs-simulator"
 )

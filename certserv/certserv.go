@@ -6,8 +6,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
-//	"flag"
+	//	"flag"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -28,7 +29,6 @@ import (
 	//"time"
 	ctrl "sigs.k8s.io/controller-runtime"
 	//"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
 )
 
 type Certserv struct {
@@ -40,11 +40,10 @@ type Certserv struct {
 }
 
 var (
-
-	caWorkDir=getEnv("workdir","/usr/local/adcs-sim")
-	caCertFile   = caWorkDir + "root.pem"
-	caKeyFile    = caWorkDir + "/ca/root.key"
-	caDir        = caWorkDir + "/ca"
+	caWorkDir  = getEnv("workdir", "/usr/local/adcs-sim")
+	caCertFile = caWorkDir + "root.pem"
+	caKeyFile  = caWorkDir + "/ca/root.key"
+	caDir      = caWorkDir + "/ca"
 
 	tmplCertnewCer   = caWorkDir + "/templates/certnew.cer.tmpl"
 	tmplCertCaRc     = caWorkDir + "/templates/certcarc.asp.tmpl"
@@ -57,8 +56,8 @@ var (
 	setupLog  = ctrl.Log.WithName("adcs-sim")
 	version   = "adcs-sim-by-djkormo"
 	buildTime = "2024-02-12:00:00"
-	
 )
+
 type SimOrders struct {
 	reject       bool
 	delay        time.Duration
@@ -66,10 +65,10 @@ type SimOrders struct {
 }
 
 func getEnv(key, fallback string) string {
-    if value, ok := os.LookupEnv(key); ok {
-        return value
-    }
-    return fallback
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
 }
 
 func NewCertserv() (*Certserv, error) {
@@ -85,8 +84,6 @@ func NewCertserv() (*Certserv, error) {
 	}
 	return cs, nil
 }
-
-
 
 func (c *Certserv) HandleCertnewCer(w http.ResponseWriter, req *http.Request) {
 	tmpl, _ := template.ParseFiles(tmplCertnewCer)
@@ -119,7 +116,7 @@ func (c *Certserv) HandleCertnewCer(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	certFileName := fmt.Sprintf("%s/%s.pem", "ca", reqId[0]) // was CaDir
-	csrFileName := fmt.Sprintf("%s/%s.csr", "ca", reqId[0]) // was CaDir
+	csrFileName := fmt.Sprintf("%s/%s.csr", "ca", reqId[0])  // was CaDir
 
 	file, err := ioutil.ReadFile(certFileName)
 	if err == nil {
@@ -145,7 +142,7 @@ func (c *Certserv) HandleCertnewCer(w http.ResponseWriter, req *http.Request) {
 	fileInfo, _ := os.Lstat(csrFileName)
 	csr, err := decodeCertRequest(string(file))
 	if err != nil {
-		msg := fmt.Sprintf("Cannot decode CSR %s for %s .", reqId[0],csrFileName)
+		msg := fmt.Sprintf("Cannot decode CSR %s for %s .", reqId[0], csrFileName)
 		res := Resp{msg, "Error"}
 		tmpl.Execute(w, res)
 		return
@@ -271,7 +268,7 @@ func (c *Certserv) HandleCertfnshAsp(w http.ResponseWriter, req *http.Request) {
 
 		//HandleCertfnshAsp
 		//Orders: &{true 0 false}
-		//Cannot write CSR file: open ca/1.csr: no such file or directory 
+		//Cannot write CSR file: open ca/1.csr: no such file or directory
 		fmt.Printf("Writing %s file\n", csrFileName)
 		err = ioutil.WriteFile(csrFileName, []byte(bodyCsr[0]), 0644)
 		if err != nil {
@@ -313,10 +310,10 @@ func (c *Certserv) CreateCertificatePem(csr *x509.CertificateRequest) ([]byte, e
 		PublicKeyAlgorithm: csr.PublicKeyAlgorithm,
 		PublicKey:          csr.PublicKey,
 
-		SerialNumber:   big.NewInt(mrand.Int63()),
-		Issuer:         c.caCert.Issuer,
-		Subject:        csr.Subject,
-		NotBefore:      time.Now(),
+		SerialNumber: big.NewInt(mrand.Int63()),
+		Issuer:       c.caCert.Issuer,
+		Subject:      csr.Subject,
+		NotBefore:    time.Now(),
 
 		NotAfter:       time.Now().Add(365 * 24 * time.Hour), // hardcoded to one year
 		KeyUsage:       keyUsages,
@@ -370,7 +367,7 @@ func decodeCertRequest(data string) (*x509.CertificateRequest, error) {
 	if block == nil {
 		m = "Cannot decode CSR PEM"
 		e := fmt.Sprintf("%s\n%s\n", m, data)
-		return nil, fmt.Errorf(e)
+		return nil, errors.New(e)
 	}
 
 	// parse the CSR
@@ -378,13 +375,13 @@ func decodeCertRequest(data string) (*x509.CertificateRequest, error) {
 	if err != nil {
 		m = "Cannot parse CSR"
 		e := fmt.Sprintf("%s: %s\n", m, err.Error())
-		return nil, fmt.Errorf(e)
+		return nil, errors.New(e)
 	}
 	err = csr.CheckSignature()
 	if err != nil {
 		m = "CSR signature error"
 		e := fmt.Sprintf("%s: %s\n", m, err.Error())
-		return csr, fmt.Errorf(e)
+		return csr, errors.New(e)
 	}
 	return csr, nil
 }
@@ -460,6 +457,6 @@ func (c *Certserv) initRootCert() error {
 	}
 	c.currentID = uint64(id)
 	fmt.Printf("Starting with id = %d\n", c.currentID)
-	setupLog.Info("Configuration","workdir ", caWorkDir)
+	setupLog.Info("Configuration", "workdir ", caWorkDir)
 	return nil
 }
