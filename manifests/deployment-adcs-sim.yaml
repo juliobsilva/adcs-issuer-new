@@ -65,6 +65,6 @@ spec:
           configMap:
             name: adcs-sim-configmap
         - name: config-key
-          configMap:
-            name: adcs-sim-configmap
+          secret:
+            secretName: adcs-issuer-credentials
 
