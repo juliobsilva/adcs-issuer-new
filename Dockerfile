@@ -1,10 +1,11 @@
 # Build the manager binary
-FROM golang:1.17 as builder
+FROM golang:1.25.12 as builder
 
 
 ARG VERSION 
 ARG COMMIT
 ARG BUILD_TIME
+ARG PROJECT=github.com/djkormo/adcs-simulator
 
 WORKDIR /workspace
 
