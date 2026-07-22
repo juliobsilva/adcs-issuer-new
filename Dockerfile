@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.25.12 as builder
+FROM golang:1.25.12 AS builder
 
 
 ARG VERSION 
@@ -44,6 +44,5 @@ COPY --from=builder /workspace/manager /usr/local/adcs-sim/manager
 USER nonroot:nonroot
 
 ENTRYPOINT ["/usr/local/adcs-sim/manager"]
-
 
 
