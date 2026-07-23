@@ -225,3 +225,44 @@ func TestBasicAuthMiddleware(t *testing.T) {
 		})
 	}
 }
+
+func TestCertStruct(t *testing.T) {
+	// Test Cert struct initialization and methods
+	now := time.Now()
+	cert := &Cert{
+		Crt:      "test_cert",
+		Csr:      "test_csr",
+		Deny:     false,
+		Denied:   false,
+		SignTime: now,
+	}
+
+	if cert.Crt != "test_cert" {
+		t.Errorf("Cert.Crt = %q, want %q", cert.Crt, "test_cert")
+	}
+
+	if cert.TimeToSign() == false {
+		t.Error("TimeToSign() should return true for current time")
+	}
+}
+
+func TestSimOrdersStruct(t *testing.T) {
+	// Test SimOrders struct
+	orders := &SimOrders{
+		reject:       true,
+		delay:        100 * time.Millisecond,
+		unauthorized: false,
+	}
+
+	if !orders.reject {
+		t.Error("SimOrders.reject should be true")
+	}
+
+	if orders.delay != 100*time.Millisecond {
+		t.Errorf("SimOrders.delay = %v, want 100ms", orders.delay)
+	}
+
+	if orders.unauthorized {
+		t.Error("SimOrders.unauthorized should be false")
+	}
+}

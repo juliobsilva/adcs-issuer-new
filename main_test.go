@@ -80,3 +80,41 @@ func TestHandleHealthz(t *testing.T) {
 func ptrString(s string) *string {
 	return &s
 }
+
+func TestPtrString(t *testing.T) {
+	// Test helper function
+	s := "test"
+	ptr := ptrString(s)
+	if ptr == nil {
+		t.Fatal("ptrString() returned nil")
+	}
+	if *ptr != "test" {
+		t.Errorf("*ptrString(\"test\") = %q, want \"test\"", *ptr)
+	}
+}
+
+func TestNetParsing(t *testing.T) {
+	// Test IP address parsing
+	tests := []struct {
+		name     string
+		ipStr    string
+		isValid  bool
+	}{
+		{"valid ipv4", "127.0.0.1", true},
+		{"valid ipv4", "192.168.1.1", true},
+		{"invalid ip", "not.an.ip", false},
+		{"empty", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ip := net.ParseIP(tt.ipStr)
+			if tt.isValid && ip == nil {
+				t.Errorf("net.ParseIP(%q) = nil, want valid IP", tt.ipStr)
+			}
+			if !tt.isValid && ip != nil {
+				t.Errorf("net.ParseIP(%q) = %v, want nil", tt.ipStr, ip)
+			}
+		})
+	}
+}
