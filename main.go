@@ -24,19 +24,17 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	"sync/atomic"
-
-	cs "github.com/djkormo/adcs-simulator/certserv"
-	"github.com/djkormo/adcs-simulator/version"
-
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	cs "github.com/djkormo/adcs-simulator/certserv"
+	"github.com/djkormo/adcs-simulator/version"
 	zaplogfmt "github.com/sykesm/zap-logfmt"
 	uzap "go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

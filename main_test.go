@@ -1,8 +1,8 @@
 package main
 
 import (
-	"testing"
 	"net"
+	"testing"
 )
 
 func TestGenerateServerCertificateValidation(t *testing.T) {
