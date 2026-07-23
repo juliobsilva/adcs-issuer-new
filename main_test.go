@@ -38,4 +38,3 @@ func TestNetParseIP(t *testing.T) {
 // Helper function
 func ptrString(s string) *string {
 	return &s
-}

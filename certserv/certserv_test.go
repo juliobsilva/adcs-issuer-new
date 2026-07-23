@@ -8,41 +8,15 @@ import (
 )
 
 func TestGetEnv(t *testing.T) {
-	tests := []struct {
-		name     string
-		key      string
-		fallback string
-		expected string
-		setup    func()
-		cleanup  func()
-	}{
-		{
-			name:     "key exists",
-			key:      "TEST_KEY_EXISTS",
-			fallback: "fallback",
-			expected: "test_value",
-			setup: func() {
-				t.Setenv("TEST_KEY_EXISTS", "test_value")
-			},
-		},
-		{
-			name:     "key not exists",
-			key:      "TEST_KEY_NOT_EXISTS_XYZ",
-			fallback: "fallback_value",
-			expected: "fallback_value",
-		},
+	t.Setenv("TEST_KEY_EXISTS", "test_value")
+	result := getEnv("TEST_KEY_EXISTS", "fallback")
+	if result != "test_value" {
+		t.Errorf("getEnv(TEST_KEY_EXISTS, fallback) = %s, want test_value", result)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
-			}
-			result := getEnv(tt.key, tt.fallback)
-			if result != tt.expected {
-				t.Errorf("getEnv(%s, %s) = %s, want %s", tt.key, tt.fallback, result, tt.expected)
-			}
-		})
+	result = getEnv("TEST_KEY_NOT_EXISTS_XYZ", "fallback_value")
+	if result != "fallback_value" {
+		t.Errorf("getEnv(TEST_KEY_NOT_EXISTS_XYZ, fallback_value) = %s, want fallback_value", result)
 	}
 }
 
@@ -183,6 +157,5 @@ func TestSimOrdersStruct(t *testing.T) {
 	if !orders.reject {
 		t.Error("SimOrders.reject should be true")
 	}
-}
 
 
