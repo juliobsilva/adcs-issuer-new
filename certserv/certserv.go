@@ -8,7 +8,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	//	"flag"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -23,13 +22,7 @@ import (
 	"time"
 
 	"github.com/jetstack/cert-manager/pkg/util/pki"
-
-	//zaplogfmt "github.com/sykesm/zap-logfmt"
-	//uzap "go.uber.org/zap"
-	//"go.uber.org/zap/zapcore"
-	//"time"
 	ctrl "sigs.k8s.io/controller-runtime"
-	//"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 type Certserv struct {
