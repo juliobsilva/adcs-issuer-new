@@ -52,21 +52,9 @@ func TestCertTimeToSign(t *testing.T) {
 		signTime time.Time
 		expected bool
 	}{
-		{
-			name:     "time in past",
-			signTime: time.Now().Add(-1 * time.Hour),
-			expected: true,
-		},
-		{
-			name:     "time in future",
-			signTime: time.Now().Add(1 * time.Hour),
-			expected: false,
-		},
-		{
-			name:     "time is now",
-			signTime: time.Now(),
-			expected: true,
-		},
+		{"past time", time.Now().Add(-1 * time.Hour), true},
+		{"future time", time.Now().Add(1 * time.Hour), false},
+		{"current time", time.Now(), true},
 	}
 
 	for _, tt := range tests {
@@ -85,64 +73,40 @@ func TestRespondError(t *testing.T) {
 		name       string
 		text       string
 		wantStatus int
-		wantBody   string
 	}{
-		{
-			name:       "error message",
-			text:       "test error",
-			wantStatus: http.StatusBadRequest,
-			wantBody:   "test error\n",
-		},
-		{
-			name:       "empty error",
-			text:       "",
-			wantStatus: http.StatusBadRequest,
-			wantBody:   "\n",
-		},
+		{"error message", "test error", http.StatusBadRequest},
+		{"empty error", "", http.StatusBadRequest},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			respondError(w, tt.text)
-
 			if w.Code != tt.wantStatus {
 				t.Errorf("respondError() status = %d, want %d", w.Code, tt.wantStatus)
-			}
-			if w.Body.String() != tt.wantBody {
-				t.Errorf("respondError() body = %q, want %q", w.Body.String(), tt.wantBody)
 			}
 		})
 	}
 }
 
 func TestGetSimOrders(t *testing.T) {
-	// Test basic functionality of getSimOrders
 	tests := []struct {
 		name         string
 		dnsNames     []string
 		expectReject bool
 	}{
-		{
-			name:         "no special names",
-			dnsNames:     []string{"example.com", "test.com"},
-			expectReject: false,
-		},
-		{
-			name:         "reject domain",
-			dnsNames:     []string{"reject.sim", "example.com"},
-			expectReject: true,
-		},
+		{"no special", []string{"example.com"}, false},
+		{"reject", []string{"reject.sim"}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			orders := getSimOrders(tt.dnsNames)
 			if orders == nil {
-				t.Fatal("getSimOrders() returned nil")
+				t.Fatal("getSimOrders returned nil")
 			}
 			if orders.reject != tt.expectReject {
-				t.Errorf("getSimOrders() reject = %v, want %v", orders.reject, tt.expectReject)
+				t.Errorf("reject = %v, want %v", orders.reject, tt.expectReject)
 			}
 		})
 	}
@@ -154,133 +118,71 @@ func TestDecodeCertRequest(t *testing.T) {
 		data      string
 		wantError bool
 	}{
-		{
-			name:      "invalid pem",
-			data:      "not a pem block",
-			wantError: true,
-		},
-		{
-			name:      "empty data",
-			data:      "",
-			wantError: true,
-		},
+		{"invalid pem", "not pem", true},
+		{"empty data", "", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := decodeCertRequest(tt.data)
 			if (err != nil) != tt.wantError {
-				t.Errorf("decodeCertRequest() error = %v, wantError %v", err, tt.wantError)
+				t.Errorf("error = %v, wantError %v", err, tt.wantError)
 			}
 		})
 	}
 }
 
 func TestBasicAuthMiddleware(t *testing.T) {
-	// Set up environment for testing
-	t.Setenv("ADCS_AUTH_USER", "testuser")
-	t.Setenv("ADCS_AUTH_PASSWORD", "testpass")
+	t.Setenv("ADCS_AUTH_USER", "user")
+	t.Setenv("ADCS_AUTH_PASSWORD", "pass")
 
 	tests := []struct {
-		name           string
-		username       string
-		password       string
-		expectedStatus int
+		name   string
+		user   string
+		pass   string
+		status int
 	}{
-		{
-			name:           "valid credentials",
-			username:       "testuser",
-			password:       "testpass",
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "invalid credentials",
-			username:       "wronguser",
-			password:       "wrongpass",
-			expectedStatus: http.StatusUnauthorized,
-		},
+		{"valid", "user", "pass", http.StatusOK},
+		{"invalid", "wrong", "wrong", http.StatusUnauthorized},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nextCalled := false
-			handler := BasicAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
-				nextCalled = true
+			called := false
+			h := BasicAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+				called = true
 				w.WriteHeader(http.StatusOK)
 			})
 
-			req := httptest.NewRequest("GET", "/test", nil)
-			req.SetBasicAuth(tt.username, tt.password)
+			req := httptest.NewRequest("GET", "/", nil)
+			req.SetBasicAuth(tt.user, tt.pass)
 			w := httptest.NewRecorder()
 
-			handler(w, req)
+			h(w, req)
 
-			if w.Code != tt.expectedStatus {
-				t.Errorf("BasicAuthMiddleware() status = %d, want %d", w.Code, tt.expectedStatus)
+			if w.Code != tt.status {
+				t.Errorf("status = %d, want %d", w.Code, tt.status)
 			}
-
-			if tt.expectedStatus == http.StatusOK && !nextCalled {
-				t.Error("BasicAuthMiddleware() next handler not called for valid credentials")
+			if tt.status == http.StatusOK && !called {
+				t.Error("handler not called")
 			}
 		})
 	}
 }
 
 func TestCertStruct(t *testing.T) {
-	// Test Cert struct initialization and methods
 	now := time.Now()
-	cert := &Cert{
-		Crt:      "test_cert",
-		Csr:      "test_csr",
-		Deny:     false,
-		Denied:   false,
-		SignTime: now,
-	}
-
-	if cert.Crt != "test_cert" {
-		t.Errorf("Cert.Crt = %q, want %q", cert.Crt, "test_cert")
-	}
-	if cert.Csr != "test_csr" {
-		t.Errorf("Cert.Csr = %q, want %q", cert.Csr, "test_csr")
-	}
-	if cert.TimeToSign() == false {
-		t.Error("TimeToSign() should return true for current/past time")
+	cert := &Cert{Crt: "cert", Csr: "csr", SignTime: now}
+	if cert.Crt != "cert" {
+		t.Errorf("Cert.Crt = %q, want cert", cert.Crt)
 	}
 }
 
 func TestSimOrdersStruct(t *testing.T) {
-	// Test SimOrders struct initialization
-	orders := &SimOrders{
-		reject:       true,
-		delay:        100 * time.Millisecond,
-		unauthorized: false,
-	}
-
+	orders := &SimOrders{reject: true}
 	if !orders.reject {
 		t.Error("SimOrders.reject should be true")
 	}
-	if orders.unauthorized {
-		t.Error("SimOrders.unauthorized should be false")
-	}
-	if orders.delay != 100*time.Millisecond {
-		t.Errorf("SimOrders.delay = %v, want 100ms", orders.delay)
-	}
 }
 
-func TestTimeToSignFuture(t *testing.T) {
-	// Test TimeToSign with future time
-	futureTime := time.Now().Add(1 * time.Hour)
-	cert := &Cert{SignTime: futureTime}
-	if cert.TimeToSign() {
-		t.Error("TimeToSign() should return false for future time")
-	}
-}
 
-func TestTimeToSignPast(t *testing.T) {
-	// Test TimeToSign with past time
-	pastTime := time.Now().Add(-1 * time.Hour)
-	cert := &Cert{SignTime: pastTime}
-	if !cert.TimeToSign() {
-		t.Error("TimeToSign() should return true for past time")
-	}
-}

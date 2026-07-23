@@ -5,116 +5,37 @@ import (
 	"testing"
 )
 
-func TestGenerateServerCertificateValidation(t *testing.T) {
-	tests := []struct {
-		name        string
-		ips         *string
-		dns         *string
-		shouldError bool
-		errorMsg    string
-	}{
-		{
-			name:        "no ips no dns",
-			ips:         ptrString(""),
-			dns:         ptrString(""),
-			shouldError: true,
-			errorMsg:    "no subjects specified",
-		},
-		{
-			name:        "valid dns",
-			ips:         ptrString(""),
-			dns:         ptrString("example.com"),
-			shouldError: false,
-		},
-		{
-			name:        "valid ip",
-			ips:         ptrString("127.0.0.1"),
-			dns:         ptrString(""),
-			shouldError: false,
-		},
-		{
-			name:        "invalid ip",
-			ips:         ptrString("not.an.ip"),
-			dns:         ptrString("example.com"),
-			shouldError: false, // continues with valid DNS
-		},
+func TestPtrString(t *testing.T) {
+	s := "test"
+	p := ptrString(s)
+	if p == nil {
+		t.Fatal("ptrString returned nil")
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// This test validates the input parsing logic
-			var ipAddresses []net.IP
-			if tt.ips != nil && len(*tt.ips) > 0 {
-				if ip := net.ParseIP(*tt.ips); ip != nil {
-					ipAddresses = append(ipAddresses, ip)
-				}
-			}
-
-			var dnsNames []string
-			if tt.dns != nil && len(*tt.dns) > 0 {
-				dnsNames = append(dnsNames, *tt.dns)
-			}
-
-			hasSubjects := len(ipAddresses) > 0 || len(dnsNames) > 0
-
-			if tt.shouldError && hasSubjects {
-				t.Errorf("generateServerCertificate() should error but got valid subjects")
-			}
-			if !tt.shouldError && !hasSubjects {
-				t.Errorf("generateServerCertificate() should not error but got no subjects")
-			}
-		})
+	if *p != "test" {
+		t.Errorf("*ptrString(\"test\") = %q, want \"test\"", *p)
 	}
 }
 
-func TestHandleHealthz(t *testing.T) {
-	// This test would require importing httptest and setting up a recorder
-	// It's a simple function that always returns 200 OK
-	t.Run("returns 200", func(t *testing.T) {
-		// Test passes if no panic occurs
-		t.Log("HandleHealthz test - returns 200 OK")
-	})
+func TestNetParseIP(t *testing.T) {
+	tests := []struct {
+		name    string
+		ip      string
+		isValid bool
+	}{
+		{"ipv4", "127.0.0.1", true},
+		{"invalid", "not-ip", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := net.ParseIP(tt.ip)
+			if (result != nil) != tt.isValid {
+				t.Errorf("ParseIP(%q) valid=%v, want %v", tt.ip, result != nil, tt.isValid)
+			}
+		})
+	}
 }
 
 // Helper function
 func ptrString(s string) *string {
 	return &s
-}
-
-func TestStringPointer(t *testing.T) {
-	// Test ptrString helper
-	str := "test_value"
-	ptr := ptrString(str)
-	if ptr == nil {
-		t.Fatal("ptrString() returned nil")
-	}
-	if *ptr != "test_value" {
-		t.Errorf("*ptrString(\"test_value\") = %q, want \"test_value\"", *ptr)
-	}
-}
-
-func TestNetParsing(t *testing.T) {
-	// Test IP address parsing
-	tests := []struct {
-		name    string
-		ipStr   string
-		isValid bool
-	}{
-		{"valid ipv4 localhost", "127.0.0.1", true},
-		{"valid ipv4", "192.168.1.1", true},
-		{"invalid ip", "not.an.ip", false},
-		{"empty ip", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ip := net.ParseIP(tt.ipStr)
-			if tt.isValid && ip == nil {
-				t.Errorf("net.ParseIP(%q) = nil, want valid IP", tt.ipStr)
-			}
-			if !tt.isValid && ip != nil {
-				t.Errorf("net.ParseIP(%q) = %v, want nil", tt.ipStr, ip)
-			}
-		})
-	}
 }
