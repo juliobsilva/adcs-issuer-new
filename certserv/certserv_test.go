@@ -1,10 +1,10 @@
 package certserv
 
 import (
-	"testing"
-	"time"
 	"net/http"
 	"net/http/httptest"
+	"testing"
+	"time"
 )
 
 func TestGetEnv(t *testing.T) {
