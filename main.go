@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/djkormo/adcs-simulator/certserv"
+	cs "github.com/djkormo/adcs-simulator/certserv"
 	"github.com/djkormo/adcs-simulator/version"
 
 	"io/ioutil"
@@ -133,11 +133,11 @@ func main() {
 		setupLog.Info("Scanning files", "File: ", filetemplate.Name(), "is dir", filetemplate.IsDir())
 	}
 
-	certserv, err := certserv.NewCertserv()
+	certservInstance, err := cs.NewCertserv()
 	if err != nil {
 		fmt.Printf("Cannot initialize NewCertserv() : %s\n", err.Error())
 	}
-	err = generateServerCertificate(certserv, ips, dns)
+	err = generateServerCertificate(certservInstance, ips, dns)
 	if err != nil {
 		fmt.Printf("Cannot generate server certificate generateServerCertificate() : %s\n", err.Error())
 	}
@@ -159,18 +159,26 @@ func main() {
 	http.HandleFunc("/readyz", HandleReadyz(isReady))
 
 	// Protected certificate endpoints (require Basic Auth)
-	http.HandleFunc("/certnew.cer", certserv.BasicAuthMiddleware(certserv.HandleCertnewCer))
-	http.HandleFunc("/certnew.p7b", certserv.BasicAuthMiddleware(certserv.HandleCertnewP7b))
-	http.HandleFunc("/certcarc.asp", certserv.BasicAuthMiddleware(certserv.HandleCertcarcAsp))
-	http.HandleFunc("/certfnsh.asp", certserv.BasicAuthMiddleware(certserv.HandleCertfnshAsp))
-	http.HandleFunc("/auth/status", certserv.AuthStatusHandler)
+	http.HandleFunc("/certnew.cer", cs.BasicAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		certservInstance.HandleCertnewCer(w, r)
+	}))
+	http.HandleFunc("/certnew.p7b", cs.BasicAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		certservInstance.HandleCertnewP7b(w, r)
+	}))
+	http.HandleFunc("/certcarc.asp", cs.BasicAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		certservInstance.HandleCertcarcAsp(w, r)
+	}))
+	http.HandleFunc("/certfnsh.asp", cs.BasicAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		certservInstance.HandleCertfnshAsp(w, r)
+	}))
+	http.HandleFunc("/auth/status", cs.AuthStatusHandler)
 
 	setupLog.Info("Starting HTTPS server", "port", *port)
 	log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", *port), serverPem, serverKey, nil))
 }
 
 // Generate certificate for the simulator server TLS
-func generateServerCertificate(cs *certserv.Certserv, ips *string, dns *string) error {
+func generateServerCertificate(certSvc *cs.Certserv, ips *string, dns *string) error {
 
 	setupLog.Info("Configuration", "workdir ", caWorkDir)
 	setupLog.Info("Configuration", "ip ", *ips)
@@ -247,7 +255,7 @@ func generateServerCertificate(cs *certserv.Certserv, ips *string, dns *string) 
 	if err != nil {
 		return fmt.Errorf("error parsing x509 certificate request: %s", err.Error())
 	}
-	certPem, err := cs.CreateCertificateChainPem(certData)
+	certPem, err := certSvc.CreateCertificateChainPem(certData)
 
 	if err != nil {
 		return fmt.Errorf("error creating x509 certificate: %s", err.Error())

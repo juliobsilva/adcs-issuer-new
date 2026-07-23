@@ -33,11 +33,11 @@ func BasicAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if user != expectedUser || pass != expectedPass {
 			w.Header().Set("WWW-Authenticate", `Basic realm="ADCS Simulator"`)
 			http.Error(w, "Unauthorized: Invalid credentials", http.StatusUnauthorized)
-			setupLog.Warn("Failed authentication attempt", "user", user)
+			setupLog.Info("Failed authentication attempt", "user", user)
 			return
 		}
 
-		setupLog.Debug("Authenticated request", "user", user)
+		setupLog.Info("Authenticated request", "user", user)
 		next(w, r)
 	}
 }
