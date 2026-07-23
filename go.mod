@@ -1,6 +1,6 @@
 module github.com/djkormo/adcs-simulator
 
-go 1.25
+go 1.23
 
 require (
 	github.com/jetstack/cert-manager v1.3.1
