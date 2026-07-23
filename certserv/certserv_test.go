@@ -138,6 +138,11 @@ func TestBasicAuthMiddleware(t *testing.T) {
 				t.Errorf("status = %d, want %d", w.Code, tt.status)
 			}
 			if tt.status == http.StatusOK && !called {
+				t.Error("handler not called for valid auth")
+			}
+		})
+	}
+}
 				t.Error("handler not called")
 			}
 		})
