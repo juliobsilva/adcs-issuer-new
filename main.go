@@ -158,11 +158,14 @@ func main() {
 	http.HandleFunc("/healthz", HandleHealthz)
 	http.HandleFunc("/readyz", HandleReadyz(isReady))
 
-	//http.HandleFunc("/readyz", HandleReadyz)
-	http.HandleFunc("/certnew.cer", certserv.HandleCertnewCer)
-	http.HandleFunc("/certnew.p7b", certserv.HandleCertnewP7b)
-	http.HandleFunc("/certcarc.asp", certserv.HandleCertcarcAsp)
-	http.HandleFunc("/certfnsh.asp", certserv.HandleCertfnshAsp)
+	// Protected certificate endpoints (require Basic Auth)
+	http.HandleFunc("/certnew.cer", certserv.BasicAuthMiddleware(certserv.HandleCertnewCer))
+	http.HandleFunc("/certnew.p7b", certserv.BasicAuthMiddleware(certserv.HandleCertnewP7b))
+	http.HandleFunc("/certcarc.asp", certserv.BasicAuthMiddleware(certserv.HandleCertcarcAsp))
+	http.HandleFunc("/certfnsh.asp", certserv.BasicAuthMiddleware(certserv.HandleCertfnshAsp))
+	http.HandleFunc("/auth/status", certserv.AuthStatusHandler)
+
+	setupLog.Info("Starting HTTPS server", "port", *port)
 	log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", *port), serverPem, serverKey, nil))
 }
 
@@ -277,40 +280,4 @@ func HandleReadyz(isReady *atomic.Value) http.HandlerFunc {
 		setupLog.Info("HandleReadyz", "check", "Ok")
 		w.WriteHeader(http.StatusOK)
 	}
-}
-
-// https://umesh.dev/posts/how-to-implement-http-basic-auth-in-gogolang
-var users = map[string]string{
-	"test": "secret",
-}
-
-func isAuthorised(username, password string) bool {
-	pass, ok := users[username]
-	if !ok {
-		return false
-	}
-
-	return password == pass
-}
-
-func greeting(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/json")
-	username, password, ok := r.BasicAuth()
-	if !ok {
-		w.Header().Add("WWW-Authenticate", `Basic realm="Give username and password"`)
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message": "No basic auth present"}`))
-		return
-	}
-
-	if !isAuthorised(username, password) {
-		w.Header().Add("WWW-Authenticate", `Basic realm="Give username and password"`)
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message": "Invalid username or password"}`))
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message": "welcome to golang world!"}`))
-	return
 }

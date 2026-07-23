@@ -15,6 +15,7 @@ import (
 	mrand "math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"sync/atomic"
@@ -32,7 +33,6 @@ import (
 )
 
 type Certserv struct {
-	// TODO Initialize
 	currentID uint64
 	certs     []Cert
 	caCert    *x509.Certificate
@@ -41,14 +41,14 @@ type Certserv struct {
 
 var (
 	caWorkDir  = getEnv("workdir", "/usr/local/adcs-sim")
-	caCertFile = caWorkDir + "root.pem"
-	caKeyFile  = caWorkDir + "/ca/root.key"
-	caDir      = caWorkDir + "/ca"
+	caCertFile = filepath.Join(caWorkDir, "root.pem")
+	caKeyFile  = filepath.Join(caWorkDir, "ca", "root.key")
+	caDir      = filepath.Join(caWorkDir, "ca")
 
-	tmplCertnewCer   = caWorkDir + "/templates/certnew.cer.tmpl"
-	tmplCertCaRc     = caWorkDir + "/templates/certcarc.asp.tmpl"
-	tmplCertFnsh     = caWorkDir + "/templates/certfnsh.asp.tmpl"
-	tmplUnauthorized = caWorkDir + "/templates/unauth.tmpl"
+	tmplCertnewCer   = filepath.Join(caWorkDir, "templates", "certnew.cer.tmpl")
+	tmplCertCaRc     = filepath.Join(caWorkDir, "templates", "certcarc.asp.tmpl")
+	tmplCertFnsh     = filepath.Join(caWorkDir, "templates", "certfnsh.asp.tmpl")
+	tmplUnauthorized = filepath.Join(caWorkDir, "templates", "unauth.tmpl")
 )
 
 var (
@@ -86,13 +86,18 @@ func NewCertserv() (*Certserv, error) {
 }
 
 func (c *Certserv) HandleCertnewCer(w http.ResponseWriter, req *http.Request) {
-	tmpl, _ := template.ParseFiles(tmplCertnewCer)
+	tmpl, err := template.ParseFiles(tmplCertnewCer)
+	if err != nil {
+		setupLog.Error(err, "Cannot parse template", "template", tmplCertnewCer)
+		respondError(w, "Internal server error")
+		return
+	}
 
 	type Resp struct {
 		DispositionMessage string
 		LastStatus         string
 	}
-	err := req.ParseForm()
+	err = req.ParseForm()
 	if err != nil {
 		respondError(w, "Cannot parse parameters")
 		return
@@ -115,8 +120,8 @@ func (c *Certserv) HandleCertnewCer(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "%s", file)
 		return
 	}
-	certFileName := fmt.Sprintf("%s/%s.pem", "ca", reqId[0]) // was CaDir
-	csrFileName := fmt.Sprintf("%s/%s.csr", "ca", reqId[0])  // was CaDir
+	certFileName := filepath.Join(caDir, fmt.Sprintf("%s.pem", reqId[0]))
+	csrFileName := filepath.Join(caDir, fmt.Sprintf("%s.csr", reqId[0]))
 
 	file, err := ioutil.ReadFile(certFileName)
 	if err == nil {
@@ -139,7 +144,13 @@ func (c *Certserv) HandleCertnewCer(w http.ResponseWriter, req *http.Request) {
 		tmpl.Execute(w, res)
 		return
 	}
-	fileInfo, _ := os.Lstat(csrFileName)
+	fileInfo, err := os.Lstat(csrFileName)
+	if err != nil {
+		msg := fmt.Sprintf("Cannot stat CSR %s for %s.", reqId[0], csrFileName)
+		res := Resp{msg, "Error"}
+		tmpl.Execute(w, res)
+		return
+	}
 	csr, err := decodeCertRequest(string(file))
 	if err != nil {
 		msg := fmt.Sprintf("Cannot decode CSR %s for %s .", reqId[0], csrFileName)
@@ -151,8 +162,14 @@ func (c *Certserv) HandleCertnewCer(w http.ResponseWriter, req *http.Request) {
 	orders := getSimOrders(csr.DNSNames)
 
 	if orders.unauthorized {
-		fmt.Printf("Unauthorized will be returned.\n")
-		file, _ := ioutil.ReadFile(tmplUnauthorized)
+		setupLog.Info("Unauthorized will be returned")
+		file, err := ioutil.ReadFile(tmplUnauthorized)
+		if err != nil {
+			setupLog.Error(err, "Cannot read unauthorized template")
+			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprintf(w, "Unauthorized\n")
+			return
+		}
 		w.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprintf(w, "%s\n", file)
 		return
@@ -208,7 +225,12 @@ func (c *Certserv) HandleCertnewP7b(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Certserv) HandleCertcarcAsp(w http.ResponseWriter, r *http.Request) {
-	tmpl, _ := template.ParseFiles(tmplCertCaRc)
+	tmpl, err := template.ParseFiles(tmplCertCaRc)
+	if err != nil {
+		setupLog.Error(err, "Cannot parse template", "template", tmplCertCaRc)
+		respondError(w, "Internal server error")
+		return
+	}
 	type Resp struct {
 		Renewals string
 	}
@@ -254,8 +276,14 @@ func (c *Certserv) HandleCertfnshAsp(w http.ResponseWriter, req *http.Request) {
 	fmt.Printf("Orders: %v\n", orders)
 
 	if orders.unauthorized {
-		fmt.Printf("Unauthorized will be returned.\n")
-		file, _ := ioutil.ReadFile(tmplUnauthorized)
+		setupLog.Info("Unauthorized request")
+		file, err := ioutil.ReadFile(tmplUnauthorized)
+		if err != nil {
+			setupLog.Error(err, "Cannot read unauthorized template")
+			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprintf(w, "Unauthorized\n")
+			return
+		}
 		w.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprintf(w, "%s\n", file)
 		return
