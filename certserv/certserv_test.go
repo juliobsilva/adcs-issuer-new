@@ -240,14 +240,16 @@ func TestCertStruct(t *testing.T) {
 	if cert.Crt != "test_cert" {
 		t.Errorf("Cert.Crt = %q, want %q", cert.Crt, "test_cert")
 	}
-
+	if cert.Csr != "test_csr" {
+		t.Errorf("Cert.Csr = %q, want %q", cert.Csr, "test_csr")
+	}
 	if cert.TimeToSign() == false {
-		t.Error("TimeToSign() should return true for current time")
+		t.Error("TimeToSign() should return true for current/past time")
 	}
 }
 
 func TestSimOrdersStruct(t *testing.T) {
-	// Test SimOrders struct
+	// Test SimOrders struct initialization
 	orders := &SimOrders{
 		reject:       true,
 		delay:        100 * time.Millisecond,
@@ -257,12 +259,28 @@ func TestSimOrdersStruct(t *testing.T) {
 	if !orders.reject {
 		t.Error("SimOrders.reject should be true")
 	}
-
+	if orders.unauthorized {
+		t.Error("SimOrders.unauthorized should be false")
+	}
 	if orders.delay != 100*time.Millisecond {
 		t.Errorf("SimOrders.delay = %v, want 100ms", orders.delay)
 	}
+}
 
-	if orders.unauthorized {
-		t.Error("SimOrders.unauthorized should be false")
+func TestTimeToSignFuture(t *testing.T) {
+	// Test TimeToSign with future time
+	futureTime := time.Now().Add(1 * time.Hour)
+	cert := &Cert{SignTime: futureTime}
+	if cert.TimeToSign() {
+		t.Error("TimeToSign() should return false for future time")
+	}
+}
+
+func TestTimeToSignPast(t *testing.T) {
+	// Test TimeToSign with past time
+	pastTime := time.Now().Add(-1 * time.Hour)
+	cert := &Cert{SignTime: pastTime}
+	if !cert.TimeToSign() {
+		t.Error("TimeToSign() should return true for past time")
 	}
 }

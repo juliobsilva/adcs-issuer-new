@@ -81,29 +81,29 @@ func ptrString(s string) *string {
 	return &s
 }
 
-func TestPtrString(t *testing.T) {
-	// Test helper function
-	s := "test"
-	ptr := ptrString(s)
+func TestStringPointer(t *testing.T) {
+	// Test ptrString helper
+	str := "test_value"
+	ptr := ptrString(str)
 	if ptr == nil {
 		t.Fatal("ptrString() returned nil")
 	}
-	if *ptr != "test" {
-		t.Errorf("*ptrString(\"test\") = %q, want \"test\"", *ptr)
+	if *ptr != "test_value" {
+		t.Errorf("*ptrString(\"test_value\") = %q, want \"test_value\"", *ptr)
 	}
 }
 
 func TestNetParsing(t *testing.T) {
 	// Test IP address parsing
 	tests := []struct {
-		name     string
-		ipStr    string
-		isValid  bool
+		name    string
+		ipStr   string
+		isValid bool
 	}{
-		{"valid ipv4", "127.0.0.1", true},
+		{"valid ipv4 localhost", "127.0.0.1", true},
 		{"valid ipv4", "192.168.1.1", true},
 		{"invalid ip", "not.an.ip", false},
-		{"empty", "", false},
+		{"empty ip", "", false},
 	}
 
 	for _, tt := range tests {
