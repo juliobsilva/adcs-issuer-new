@@ -44,7 +44,15 @@ jobs:
         run: go build -o /tmp/adcs-sim main.go
 
       - name: Run tests with coverage
-        run: go test -v -coverprofile=coverage.out ./...
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Go version: $(go version)"
+          echo "Go env: $(go env)"
+          echo "Files in certserv/:"
+          ls -la ./certserv/
+          echo "Files in root:"
+          ls -la ./*.go || echo "No .go files in root"
+          go test -v -coverprofile=coverage.out ./... || (echo "Test failed"; go test -v ./... 2>&1)
 
       - name: Check coverage
         run: |
